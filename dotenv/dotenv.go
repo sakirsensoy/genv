@@ -10,7 +10,7 @@ import (
 
 const keyValRegex = `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`
 
-func Load(path ...string) {
+func Load(path ...string) (err error) {
 
 	var dotenvPath string
 	if len(path) > 0 {
@@ -37,6 +37,8 @@ func Load(path ...string) {
 			os.Setenv(key, val)
 		}
 	}
+
+	return
 }
 
 func parse(source *os.File) (variables map[string]string, err error) {
