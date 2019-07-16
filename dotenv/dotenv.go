@@ -8,12 +8,16 @@ import (
 	"strings"
 )
 
-const (
-	dotenvPath  = ".env"
-	keyValRegex = `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`
-)
+const keyValRegex = `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`
 
-func init() {
+func Load(path ...string) {
+
+	var dotenvPath string
+	if len(path) > 0 {
+		dotenvPath = path[0]
+	} else {
+		dotenvPath = ".env"
+	}
 
 	source, err := os.Open(dotenvPath)
 	if err != nil {
