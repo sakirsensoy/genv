@@ -1,3 +1,3 @@
-module github.com/sakirsensoy/env
+module github.com/sakirsensoy/genv
 
 go 1.12
