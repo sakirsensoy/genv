@@ -8,7 +8,7 @@ Read environment variables easily with type support and load them from .env in G
 go get github.com/sakirsensoy/genv
 ```
 
-## Example
+## Example Usage
 
 `.env`:
 
