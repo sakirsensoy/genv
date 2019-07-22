@@ -66,29 +66,29 @@ func  main() {
 }
 ```
 
-## Accessing Environment Variables
+### Accessing Environment Variables
 
 Genv provides an easy-to-use API for accessing environment variables.
 
-#### First we specify the key to the variable want to access:
+First we specify the key to the variable want to access:
 
 ```go
 var env = genv.Key("MY_VARIABLE")
 ```
 
-#### Define default value (optional):
+Define default value (optional):
 
 ```go
 env = env.Default("default_value")
 ```
 
-#### Finally, we specify the type of the environment variable and pass its contents to another variable:
+Finally, we specify the type of the environment variable and pass its contents to another variable:
 
 ```go
 var myVariable = env.String()
 ```
 
-## Supported Variable Types
+### Supported Variable Types
 
 Genv provides support for the following data types:
 
