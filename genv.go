@@ -8,28 +8,31 @@ import (
 	"strconv"
 )
 
-type envVariable struct {
+// EnvVariable contains information about the environment variable, such as key,
+// value, and default value.
+type EnvVariable struct {
 	key          string
 	val          string
 	defaultValue interface{}
 	isDefined    bool
 }
 
-var envVariables = make(map[string]*envVariable)
+// EnvVariables is where environment variables are stored.
+var EnvVariables = make(map[string]*EnvVariable)
 
 // Key is used to determine the path of the environment variable to be accessed.
 //
 //				genv.Key("env-key").String()
 //
-func Key(key string) *envVariable {
+func Key(key string) *EnvVariable {
 
-	envVar, ok := envVariables[key]
+	envVar, ok := EnvVariables[key]
 	if !ok {
 
 		val, ok := os.LookupEnv(key)
-		envVariables[key] = &envVariable{key: key, val: val, isDefined: ok}
+		EnvVariables[key] = &EnvVariable{key: key, val: val, isDefined: ok}
 
-		return envVariables[key]
+		return EnvVariables[key]
 	}
 
 	return envVar
@@ -40,7 +43,7 @@ func Key(key string) *envVariable {
 //
 //				genv.Key("env-key").Default("defaultValue").String()
 //
-func (e *envVariable) Default(defaultValue interface{}) *envVariable {
+func (e *EnvVariable) Default(defaultValue interface{}) *EnvVariable {
 
 	e.defaultValue = defaultValue
 
@@ -51,7 +54,7 @@ func (e *envVariable) Default(defaultValue interface{}) *envVariable {
 //
 //				genv.Key("env-key").Update("updatedValue")
 //
-func (e *envVariable) Update(value interface{}) {
+func (e *EnvVariable) Update(value interface{}) {
 
 	switch value.(type) {
 	case bool:
@@ -72,7 +75,7 @@ func (e *envVariable) Update(value interface{}) {
 //
 //				genv.Key("env-key").Bool()
 //
-func (e *envVariable) Bool() bool {
+func (e *EnvVariable) Bool() bool {
 
 	var dv bool
 	if !e.isDefined {
@@ -92,7 +95,7 @@ func (e *envVariable) Bool() bool {
 //
 //				genv.Key("env-key").Float()
 //
-func (e *envVariable) Float() float64 {
+func (e *EnvVariable) Float() float64 {
 
 	var dv float64
 	if !e.isDefined {
@@ -112,7 +115,7 @@ func (e *envVariable) Float() float64 {
 //
 //				genv.Key("env-key").Int()
 //
-func (e *envVariable) Int() int {
+func (e *EnvVariable) Int() int {
 
 	var dv int
 	if !e.isDefined {
@@ -132,7 +135,7 @@ func (e *envVariable) Int() int {
 //
 //				genv.Key("env-key").String()
 //
-func (e *envVariable) String() string {
+func (e *EnvVariable) String() string {
 
 	var dv string
 	if !e.isDefined {
