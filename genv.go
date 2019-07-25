@@ -1,3 +1,6 @@
+// Package genv is a library for Go (golang) that makes it easy to read and use
+// environment variables in your projects. It also allows environment variables
+// to be loaded from the .env file.
 package genv
 
 import (
@@ -14,6 +17,10 @@ type envVariable struct {
 
 var envVariables = make(map[string]*envVariable)
 
+// Key is used to determine the path of the environment variable to be accessed.
+//
+//				genv.Key("env-key").String()
+//
 func Key(key string) *envVariable {
 
 	envVar, ok := envVariables[key]
@@ -28,6 +35,11 @@ func Key(key string) *envVariable {
 	return envVar
 }
 
+// Default is used to specify the default value for the environment
+// variable to be accessed.
+//
+//				genv.Key("env-key").Default("defaultValue").String()
+//
 func (e *envVariable) Default(defaultValue interface{}) *envVariable {
 
 	e.defaultValue = defaultValue
@@ -35,6 +47,10 @@ func (e *envVariable) Default(defaultValue interface{}) *envVariable {
 	return e
 }
 
+// Update is used to update the value of the corresponding environment variable.
+//
+//				genv.Key("env-key").Update("updatedValue")
+//
 func (e *envVariable) Update(value interface{}) {
 
 	switch value.(type) {
@@ -52,6 +68,10 @@ func (e *envVariable) Update(value interface{}) {
 	os.Setenv(e.key, e.val)
 }
 
+// Bool method is used for environment variables of type bool.
+//
+//				genv.Key("env-key").Bool()
+//
 func (e *envVariable) Bool() bool {
 
 	var dv bool
@@ -68,6 +88,10 @@ func (e *envVariable) Bool() bool {
 	return val
 }
 
+// Float method is used for environment variables of type float.
+//
+//				genv.Key("env-key").Float()
+//
 func (e *envVariable) Float() float64 {
 
 	var dv float64
@@ -84,6 +108,10 @@ func (e *envVariable) Float() float64 {
 	return val
 }
 
+// Int method is used for environment variables of type int.
+//
+//				genv.Key("env-key").Int()
+//
 func (e *envVariable) Int() int {
 
 	var dv int
@@ -100,6 +128,10 @@ func (e *envVariable) Int() int {
 	return int(val)
 }
 
+// String method is used for environment variables of type string.
+//
+//				genv.Key("env-key").String()
+//
 func (e *envVariable) String() string {
 
 	var dv string

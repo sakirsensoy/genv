@@ -10,6 +10,10 @@ import (
 
 const keyValRegex = `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`
 
+// Load method allows environment variables to be loaded from the desired file.
+//
+//				dotenv.Load(".envfile")
+//
 func Load(path ...string) (err error) {
 
 	var dotenvPath string

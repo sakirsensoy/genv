@@ -25,7 +25,7 @@ In the meantime, it is optional to use the `.env` file. You can also send enviro
 APP_HOST=localhost ./myproject
 ```
 
-Rather than using your environment variables directly in your project, it is better to map and match them with a structure.  Below (`config/config.go`) you can see how we get our application parameters from environment variables:
+Rather than using your environment variables directly in your project, it is better to map and match them with a struct.  Below you can see how we get our application parameters from environment variables:
 
 ```go
 // config/config.go
@@ -46,7 +46,7 @@ var  App = &appConfig{
 }
 ```
 
-In `main.go` we first include the package that allows you to automatically load the environment variables from the .env file. Then we can include and use the parameters defined in `config / config.go`:
+In `main.go` we first include the package that allows you to automatically load the environment variables from the .env file. Then we can include and use the parameters defined in `config.go`:
 
 ```go
 // main.go
