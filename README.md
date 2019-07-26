@@ -5,7 +5,7 @@ Genv is a library for Go (golang) that makes it easy to read and use environment
 ## Installation
 
 ```shell
-go get -u github.com/sakirsensoy/genv
+go get github.com/sakirsensoy/genv
 ```
 
 ## Usage

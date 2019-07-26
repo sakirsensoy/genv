@@ -11,10 +11,10 @@ import (
 // EnvVariable contains information about the environment variable, such as key,
 // value, and default value.
 type EnvVariable struct {
-	key          string
-	val          string
-	defaultValue interface{}
-	isDefined    bool
+	Key          string
+	Val          string
+	DefaultValue interface{}
+	IsDefined    bool
 }
 
 // EnvVariables is where environment variables are stored.
@@ -30,7 +30,7 @@ func Key(key string) *EnvVariable {
 	if !ok {
 
 		val, ok := os.LookupEnv(key)
-		EnvVariables[key] = &EnvVariable{key: key, val: val, isDefined: ok}
+		EnvVariables[key] = &EnvVariable{Key: key, Val: val, IsDefined: ok}
 
 		return EnvVariables[key]
 	}
@@ -45,7 +45,7 @@ func Key(key string) *EnvVariable {
 //
 func (e *EnvVariable) Default(defaultValue interface{}) *EnvVariable {
 
-	e.defaultValue = defaultValue
+	e.DefaultValue = defaultValue
 
 	return e
 }
@@ -58,17 +58,17 @@ func (e *EnvVariable) Update(value interface{}) {
 
 	switch value.(type) {
 	case bool:
-		e.val = strconv.FormatBool(value.(bool))
+		e.Val = strconv.FormatBool(value.(bool))
 	case float64:
-		e.val = strconv.FormatFloat(value.(float64), 'f', -1, 64)
+		e.Val = strconv.FormatFloat(value.(float64), 'f', -1, 64)
 	case int:
-		e.val = strconv.FormatInt(int64(value.(int)), 10)
+		e.Val = strconv.FormatInt(int64(value.(int)), 10)
 	case string:
-		e.val = value.(string)
+		e.Val = value.(string)
 	}
 
-	e.isDefined = true
-	os.Setenv(e.key, e.val)
+	e.IsDefined = true
+	os.Setenv(e.Key, e.Val)
 }
 
 // Bool method is used for environment variables of type bool.
@@ -78,15 +78,15 @@ func (e *EnvVariable) Update(value interface{}) {
 func (e *EnvVariable) Bool() bool {
 
 	var dv bool
-	if !e.isDefined {
-		if e.defaultValue != nil {
-			dv = e.defaultValue.(bool)
+	if !e.IsDefined {
+		if e.DefaultValue != nil {
+			dv = e.DefaultValue.(bool)
 		}
 
 		return dv
 	}
 
-	val, _ := strconv.ParseBool(e.val)
+	val, _ := strconv.ParseBool(e.Val)
 
 	return val
 }
@@ -98,15 +98,15 @@ func (e *EnvVariable) Bool() bool {
 func (e *EnvVariable) Float() float64 {
 
 	var dv float64
-	if !e.isDefined {
-		if e.defaultValue != nil {
-			dv = e.defaultValue.(float64)
+	if !e.IsDefined {
+		if e.DefaultValue != nil {
+			dv = e.DefaultValue.(float64)
 		}
 
 		return dv
 	}
 
-	val, _ := strconv.ParseFloat(e.val, 64)
+	val, _ := strconv.ParseFloat(e.Val, 64)
 
 	return val
 }
@@ -118,15 +118,15 @@ func (e *EnvVariable) Float() float64 {
 func (e *EnvVariable) Int() int {
 
 	var dv int
-	if !e.isDefined {
-		if e.defaultValue != nil {
-			dv = e.defaultValue.(int)
+	if !e.IsDefined {
+		if e.DefaultValue != nil {
+			dv = e.DefaultValue.(int)
 		}
 
 		return dv
 	}
 
-	val, _ := strconv.ParseInt(e.val, 10, 32)
+	val, _ := strconv.ParseInt(e.Val, 10, 32)
 
 	return int(val)
 }
@@ -138,13 +138,13 @@ func (e *EnvVariable) Int() int {
 func (e *EnvVariable) String() string {
 
 	var dv string
-	if !e.isDefined {
-		if e.defaultValue != nil {
-			dv = e.defaultValue.(string)
+	if !e.IsDefined {
+		if e.DefaultValue != nil {
+			dv = e.DefaultValue.(string)
 		}
 
 		return dv
 	}
 
-	return e.val
+	return e.Val
 }

@@ -12,10 +12,38 @@ func TestUndefinedVar(t *testing.T) {
 	os.Clearenv()
 
 	key := "UNDEF_VAR"
-	expectVal := "TR"
-	val := genv.Key(key).Default(expectVal).String()
-	if val != expectVal {
-		t.Errorf("Expected '%v' got '%v'", expectVal, val)
+	cases := []struct {
+		Val       interface{}
+		ExpectVal interface{}
+	}{
+		{Val: "UPV", ExpectVal: "UPV"},
+		{Val: 11.332, ExpectVal: 11.332},
+		{Val: false, ExpectVal: false},
+		{Val: 1234, ExpectVal: 1234},
+	}
+
+	for _, td := range cases {
+
+		envVar := genv.Key(key).Default(td.Val)
+
+		switch td.ExpectVal.(type) {
+		case bool:
+			if val := envVar.Bool(); td.ExpectVal != val {
+				t.Errorf("Expected '%v' got '%v'", td.ExpectVal, val)
+			}
+		case float64:
+			if val := envVar.Float(); td.ExpectVal != val {
+				t.Errorf("Expected '%v' got '%v'", td.ExpectVal, val)
+			}
+		case int:
+			if val := envVar.Int(); td.ExpectVal != val {
+				t.Errorf("Expected '%v' got '%v'", td.ExpectVal, val)
+			}
+		case string:
+			if val := envVar.String(); td.ExpectVal != val {
+				t.Errorf("Expected '%v' got '%v'", td.ExpectVal, val)
+			}
+		}
 	}
 }
 
@@ -39,13 +67,13 @@ func TestEnvGetSet(t *testing.T) {
 
 	key := "VAR"
 	cases := []struct {
-		Val       string
+		Val       interface{}
 		ExpectVal interface{}
 	}{
 		{Val: "UPV", ExpectVal: "UPV"},
-		{Val: "11.332", ExpectVal: 11.332},
-		{Val: "false", ExpectVal: false},
-		{Val: "1234", ExpectVal: 1234},
+		{Val: 11.332, ExpectVal: 11.332},
+		{Val: false, ExpectVal: false},
+		{Val: 1234, ExpectVal: 1234},
 	}
 
 	for _, td := range cases {
