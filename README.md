@@ -1,4 +1,4 @@
-# Genv [![Build Status](https://travis-ci.org/sakirsensoy/genv.svg?branch=master)](https://travis-ci.org/sakirsensoy/genv) [![Go Report Card](https://goreportcard.com/badge/github.com/sakirsensoy/genv)](https://goreportcard.com/report/github.com/sakirsensoy/genv) [![GoDoc](https://godoc.org/github.com/sakirsensoy/genv?status.svg)](https://godoc.org/github.com/sakirsensoy/genv)
+# Genv [![Build Status](https://travis-ci.org/sakirsensoy/genv.svg?branch=master)](https://travis-ci.org/sakirsensoy/genv) [![Go Report Card](https://goreportcard.com/badge/github.com/sakirsensoy/genv)](https://goreportcard.com/report/github.com/sakirsensoy/genv) [![Coverage Status](https://coveralls.io/repos/github/sakirsensoy/genv/badge.svg?branch=master)](https://coveralls.io/github/sakirsensoy/genv?branch=master) [![GoDoc](https://godoc.org/github.com/sakirsensoy/genv?status.svg)](https://godoc.org/github.com/sakirsensoy/genv)
 
 Genv is a library for Go (golang) that makes it easy to read and use environment variables in your projects. It also allows environment variables to be loaded from the .env file.
 
