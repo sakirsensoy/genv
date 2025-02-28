@@ -22,8 +22,7 @@ var EnvVariables = make(map[string]*EnvVariable)
 
 // Key is used to determine the path of the environment variable to be accessed.
 //
-//				genv.Key("env-key").String()
-//
+//	genv.Key("env-key").String()
 func Key(key string) *EnvVariable {
 
 	envVar, ok := EnvVariables[key]
@@ -41,8 +40,7 @@ func Key(key string) *EnvVariable {
 // Default is used to specify the default value for the environment
 // variable to be accessed.
 //
-//				genv.Key("env-key").Default("defaultValue").String()
-//
+//	genv.Key("env-key").Default("defaultValue").String()
 func (e *EnvVariable) Default(defaultValue interface{}) *EnvVariable {
 
 	e.DefaultValue = defaultValue
@@ -52,8 +50,7 @@ func (e *EnvVariable) Default(defaultValue interface{}) *EnvVariable {
 
 // Update is used to update the value of the corresponding environment variable.
 //
-//				genv.Key("env-key").Update("updatedValue")
-//
+//	genv.Key("env-key").Update("updatedValue")
 func (e *EnvVariable) Update(value interface{}) {
 
 	switch value.(type) {
@@ -73,8 +70,7 @@ func (e *EnvVariable) Update(value interface{}) {
 
 // Bool method is used for environment variables of type bool.
 //
-//				genv.Key("env-key").Bool()
-//
+//	genv.Key("env-key").Bool()
 func (e *EnvVariable) Bool() bool {
 
 	var dv bool
@@ -93,8 +89,7 @@ func (e *EnvVariable) Bool() bool {
 
 // Float method is used for environment variables of type float.
 //
-//				genv.Key("env-key").Float()
-//
+//	genv.Key("env-key").Float()
 func (e *EnvVariable) Float() float64 {
 
 	var dv float64
@@ -113,8 +108,7 @@ func (e *EnvVariable) Float() float64 {
 
 // Int method is used for environment variables of type int.
 //
-//				genv.Key("env-key").Int()
-//
+//	genv.Key("env-key").Int()
 func (e *EnvVariable) Int() int {
 
 	var dv int
@@ -131,10 +125,21 @@ func (e *EnvVariable) Int() int {
 	return int(val)
 }
 
+// trimQuotes removes single or double quotes from the beginning and end of a string
+// if they exist at both ends.
+func trimQuotes(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
 // String method is used for environment variables of type string.
+// It automatically trims single or double quotes from the beginning and end of the value.
 //
-//				genv.Key("env-key").String()
-//
+//	genv.Key("env-key").String()
 func (e *EnvVariable) String() string {
 
 	var dv string
@@ -143,8 +148,8 @@ func (e *EnvVariable) String() string {
 			dv = e.DefaultValue.(string)
 		}
 
-		return dv
+		return trimQuotes(dv)
 	}
 
-	return e.Val
+	return trimQuotes(e.Val)
 }
