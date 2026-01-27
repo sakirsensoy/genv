@@ -24,14 +24,22 @@ var EnvVariables = make(map[string]*EnvVariable)
 //
 //	genv.Key("env-key").String()
 func Key(key string) *EnvVariable {
-
 	envVar, ok := EnvVariables[key]
 	if !ok {
-
-		val, ok := os.LookupEnv(key)
-		EnvVariables[key] = &EnvVariable{Key: key, Val: val, IsDefined: ok}
-
+		// Not in cache, create new entry
+		val, defined := os.LookupEnv(key)
+		EnvVariables[key] = &EnvVariable{Key: key, Val: val, IsDefined: defined}
 		return EnvVariables[key]
+	}
+
+	// If cached but was not defined, re-check the environment
+	// This handles the case where dotenv.Load() is called after genv.Key()
+	if !envVar.IsDefined {
+		val, defined := os.LookupEnv(key)
+		if defined {
+			envVar.Val = val
+			envVar.IsDefined = true
+		}
 	}
 
 	return envVar

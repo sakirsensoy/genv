@@ -157,3 +157,45 @@ func TestQuoteTrimmingWithDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestCacheRefreshAfterEnvSet(t *testing.T) {
+	// This test verifies that genv.Key() correctly refreshes the cache
+	// when an environment variable is set after initial lookup.
+	// This is important for the dotenv.Load() use case where env vars
+	// might be accessed before the .env file is loaded.
+
+	os.Clearenv()
+	delete(genv.EnvVariables, "CACHE_TEST_VAR") // Clear cache for this key
+
+	// First access - should be undefined
+	envVar := genv.Key("CACHE_TEST_VAR")
+	if envVar.IsDefined {
+		t.Error("Expected IsDefined to be false before setting env var")
+	}
+	if envVar.Bool() != false {
+		t.Error("Expected Bool() to return false for undefined var")
+	}
+
+	// Now set the environment variable (simulating dotenv.Load())
+	os.Setenv("CACHE_TEST_VAR", "true")
+
+	// Second access - should pick up the new value
+	envVar2 := genv.Key("CACHE_TEST_VAR")
+	if !envVar2.IsDefined {
+		t.Error("Expected IsDefined to be true after setting env var")
+	}
+	if envVar2.Bool() != true {
+		t.Errorf("Expected Bool() to return true, got %v", envVar2.Bool())
+	}
+
+	// Test with other types
+	os.Clearenv()
+	delete(genv.EnvVariables, "CACHE_TEST_INT")
+
+	genv.Key("CACHE_TEST_INT") // Access before setting
+	os.Setenv("CACHE_TEST_INT", "42")
+
+	if val := genv.Key("CACHE_TEST_INT").Int(); val != 42 {
+		t.Errorf("Expected Int() to return 42, got %v", val)
+	}
+}
