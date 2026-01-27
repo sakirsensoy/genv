@@ -1,7 +1,9 @@
 package genv_test
 
 import (
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/sakirsensoy/genv"
@@ -158,44 +160,264 @@ func TestQuoteTrimmingWithDefault(t *testing.T) {
 	}
 }
 
-func TestCacheRefreshAfterEnvSet(t *testing.T) {
-	// This test verifies that genv.Key() correctly refreshes the cache
-	// when an environment variable is set after initial lookup.
-	// This is important for the dotenv.Load() use case where env vars
-	// might be accessed before the .env file is loaded.
+// ==================== Multi-threaded Tests ====================
 
+func TestConcurrentKeyAccess(t *testing.T) {
+	// Test concurrent access to genv.Key() for the same key
 	os.Clearenv()
-	delete(genv.EnvVariables, "CACHE_TEST_VAR") // Clear cache for this key
+	os.Setenv("CONCURRENT_KEY", "concurrent_value")
 
-	// First access - should be undefined
-	envVar := genv.Key("CACHE_TEST_VAR")
-	if envVar.IsDefined {
-		t.Error("Expected IsDefined to be false before setting env var")
-	}
-	if envVar.Bool() != false {
-		t.Error("Expected Bool() to return false for undefined var")
-	}
+	const goroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
 
-	// Now set the environment variable (simulating dotenv.Load())
-	os.Setenv("CACHE_TEST_VAR", "true")
+	errors := make(chan error, goroutines)
 
-	// Second access - should pick up the new value
-	envVar2 := genv.Key("CACHE_TEST_VAR")
-	if !envVar2.IsDefined {
-		t.Error("Expected IsDefined to be true after setting env var")
-	}
-	if envVar2.Bool() != true {
-		t.Errorf("Expected Bool() to return true, got %v", envVar2.Bool())
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			val := genv.Key("CONCURRENT_KEY").String()
+			if val != "concurrent_value" {
+				errors <- fmt.Errorf("expected 'concurrent_value', got '%s'", val)
+			}
+		}()
 	}
 
-	// Test with other types
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+func TestConcurrentDifferentKeys(t *testing.T) {
+	// Test concurrent access to different keys
 	os.Clearenv()
-	delete(genv.EnvVariables, "CACHE_TEST_INT")
 
-	genv.Key("CACHE_TEST_INT") // Access before setting
-	os.Setenv("CACHE_TEST_INT", "42")
-
-	if val := genv.Key("CACHE_TEST_INT").Int(); val != 42 {
-		t.Errorf("Expected Int() to return 42, got %v", val)
+	const numKeys = 50
+	for i := 0; i < numKeys; i++ {
+		os.Setenv(fmt.Sprintf("DIFF_KEY_%d", i), fmt.Sprintf("value_%d", i))
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(numKeys * 2) // Each key accessed twice concurrently
+
+	errors := make(chan error, numKeys*2)
+
+	for i := 0; i < numKeys; i++ {
+		keyNum := i
+		// First goroutine
+		go func() {
+			defer wg.Done()
+			key := fmt.Sprintf("DIFF_KEY_%d", keyNum)
+			expected := fmt.Sprintf("value_%d", keyNum)
+			val := genv.Key(key).String()
+			if val != expected {
+				errors <- fmt.Errorf("key %s: expected '%s', got '%s'", key, expected, val)
+			}
+		}()
+		// Second goroutine for same key
+		go func() {
+			defer wg.Done()
+			key := fmt.Sprintf("DIFF_KEY_%d", keyNum)
+			expected := fmt.Sprintf("value_%d", keyNum)
+			val := genv.Key(key).String()
+			if val != expected {
+				errors <- fmt.Errorf("key %s: expected '%s', got '%s'", key, expected, val)
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+func TestConcurrentReadWrite(t *testing.T) {
+	// Test concurrent read and write operations
+	os.Clearenv()
+	os.Setenv("RW_KEY", "initial")
+
+	const goroutines = 50
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2)
+
+	// Readers
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			_ = genv.Key("RW_KEY").String()
+		}()
+	}
+
+	// Writers
+	for i := 0; i < goroutines; i++ {
+		iteration := i
+		go func() {
+			defer wg.Done()
+			genv.Key("RW_KEY").Update(fmt.Sprintf("value_%d", iteration))
+		}()
+	}
+
+	wg.Wait()
+
+	// Final value should be one of the written values
+	finalVal := genv.Key("RW_KEY").String()
+	if finalVal == "" {
+		t.Error("Final value should not be empty")
+	}
+}
+
+func TestConcurrentTypeConversions(t *testing.T) {
+	// Test concurrent access with different type conversions
+	os.Clearenv()
+	os.Setenv("CONV_INT", "42")
+	os.Setenv("CONV_FLOAT", "3.14")
+	os.Setenv("CONV_BOOL", "true")
+	os.Setenv("CONV_STRING", "hello")
+
+	const goroutines = 25
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 4)
+
+	errors := make(chan error, goroutines*4)
+
+	// Int conversions
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			if val := genv.Key("CONV_INT").Int(); val != 42 {
+				errors <- fmt.Errorf("expected int 42, got %d", val)
+			}
+		}()
+	}
+
+	// Float conversions
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			if val := genv.Key("CONV_FLOAT").Float(); val != 3.14 {
+				errors <- fmt.Errorf("expected float 3.14, got %f", val)
+			}
+		}()
+	}
+
+	// Bool conversions
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			if val := genv.Key("CONV_BOOL").Bool(); val != true {
+				errors <- fmt.Errorf("expected bool true, got %v", val)
+			}
+		}()
+	}
+
+	// String conversions
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			if val := genv.Key("CONV_STRING").String(); val != "hello" {
+				errors <- fmt.Errorf("expected string 'hello', got '%s'", val)
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+func TestConcurrentWithDefaults(t *testing.T) {
+	// Test concurrent access with default values
+	os.Clearenv()
+
+	const goroutines = 50
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 4)
+
+	errors := make(chan error, goroutines*4)
+
+	// String with default
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			val := genv.Key("UNDEF_STR").Default("default_string").String()
+			if val != "default_string" {
+				errors <- fmt.Errorf("expected 'default_string', got '%s'", val)
+			}
+		}()
+	}
+
+	// Int with default
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			val := genv.Key("UNDEF_INT").Default(999).Int()
+			if val != 999 {
+				errors <- fmt.Errorf("expected 999, got %d", val)
+			}
+		}()
+	}
+
+	// Float with default
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			val := genv.Key("UNDEF_FLOAT").Default(1.23).Float()
+			if val != 1.23 {
+				errors <- fmt.Errorf("expected 1.23, got %f", val)
+			}
+		}()
+	}
+
+	// Bool with default
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			val := genv.Key("UNDEF_BOOL").Default(true).Bool()
+			if val != true {
+				errors <- fmt.Errorf("expected true, got %v", val)
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+// Benchmark concurrent access
+func BenchmarkConcurrentKeyAccess(b *testing.B) {
+	os.Setenv("BENCH_KEY", "bench_value")
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = genv.Key("BENCH_KEY").String()
+		}
+	})
+}
+
+func BenchmarkConcurrentDifferentKeys(b *testing.B) {
+	for i := 0; i < 100; i++ {
+		os.Setenv(fmt.Sprintf("BENCH_KEY_%d", i), fmt.Sprintf("value_%d", i))
+	}
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			key := fmt.Sprintf("BENCH_KEY_%d", i%100)
+			_ = genv.Key(key).String()
+			i++
+		}
+	})
 }

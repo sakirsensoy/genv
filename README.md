@@ -4,6 +4,8 @@
 
 Genv is a library for Go (golang) that makes it easy to read and use environment variables in your projects. It also allows environment variables to be loaded from the .env file.
 
+The dotenv parser is fully compatible with [motdotla/dotenv](https://github.com/motdotla/dotenv), the de facto standard dotenv implementation used by Node.js projects.
+
 ## Installation
 
 ```shell
@@ -19,6 +21,42 @@ Create a `.env` file in the root directory of your project and enter the environ
 APP_HOST=localhost
 APP_PORT=1234
 APP_DEBUG=true
+```
+
+### Supported .env Syntax
+
+The parser supports the full [motdotla/dotenv](https://github.com/motdotla/dotenv) specification:
+
+```shell
+# Comments start with #
+BASIC=basic
+
+# Empty values
+EMPTY=
+
+# Whitespace is trimmed from unquoted values
+SPACED=   some value   
+
+# Single quotes (raw, no escape processing)
+SINGLE='quoted value'
+
+# Double quotes (expands \n and \r)
+DOUBLE="line1\nline2"
+
+# Backticks (raw, no escape processing)
+BACKTICK=`raw value`
+
+# Inline comments (for unquoted values)
+WITH_COMMENT=value # this is a comment
+
+# Export prefix is supported
+export EXPORTED=value
+
+# Colon separator is also supported
+COLON: value
+
+# JSON values work correctly
+JSON={"foo": "bar", "baz": 123}
 ```
 
 In the meantime, it is optional to use the `.env` file. You can also send environment variables to your project in classic ways:
@@ -48,25 +86,43 @@ var  App = &appConfig{
 }
 ```
 
-In `main.go` we first include the package that allows you to automatically load the environment variables from the .env file. Then we can include and use the parameters defined in `config.go`:
+In `main.go` we can directly use the parameters defined in `config.go`. The `.env` file is automatically loaded on the first `genv.Key()` call:
 
 ```go
 // main.go
 package main
 
 import (
-	_ "github.com/sakirsensoy/genv/dotenv/autoload"
-
 	"fmt"
 	"myproject/config"
 )
 
-func  main() {
+func main() {
 	fmt.Println(config.App.Host) // localhost
 	fmt.Println(config.App.Port) // 1234
 	fmt.Println(config.App.Debug) // true
 }
 ```
+
+### Auto-load Configuration
+
+By default, genv automatically loads the `.env` file on the first `Key()` call. You can customize this behavior:
+
+```go
+package main
+
+import "github.com/sakirsensoy/genv"
+
+func init() {
+	// Disable auto-loading (must be called before any Key() calls)
+	genv.DisableAutoLoad()
+	
+	// Or change the default path (must be called before any Key() calls)
+	genv.SetAutoLoadPath(".env.local")
+}
+```
+
+> **Note:** The `github.com/sakirsensoy/genv/dotenv/autoload` package is still available for backward compatibility, but it's no longer necessary since auto-loading is now enabled by default.
 
 ### Accessing Environment Variables
 
@@ -105,6 +161,22 @@ For other types, you can use type conversion:
 var stringValue = genv.Key("KEY").String()
 var byteArrayValue = []byte(stringValue)
 ```
+
+### Updating Environment Variables
+
+You can update environment variables at runtime using the `Update()` method:
+
+```go
+genv.Key("APP_DEBUG").Update(false)
+genv.Key("APP_PORT").Update(8080)
+genv.Key("APP_HOST").Update("127.0.0.1")
+```
+
+The `Update()` method updates both the internal cache and the actual environment variable via `os.Setenv()`.
+
+### Thread Safety
+
+Genv is safe for concurrent use. All read and write operations are protected by mutexes, making it suitable for use in multi-goroutine applications.
 
 ## Contributing
 

@@ -6,7 +6,40 @@ package genv
 import (
 	"os"
 	"strconv"
+	"sync"
+
+	"github.com/sakirsensoy/genv/dotenv"
 )
+
+var (
+	autoLoadOnce    sync.Once
+	autoLoadEnabled = true // Enabled by default
+	autoLoadPath    = ".env"
+
+	// mu protects EnvVariables map for concurrent access
+	mu sync.RWMutex
+)
+
+// DisableAutoLoad disables automatic .env file loading.
+// Must be called before any genv.Key() calls.
+func DisableAutoLoad() {
+	autoLoadEnabled = false
+}
+
+// SetAutoLoadPath sets the path for automatic .env file loading.
+// Default is ".env". Must be called before any genv.Key() calls.
+func SetAutoLoadPath(path string) {
+	autoLoadPath = path
+}
+
+// ensureEnvLoaded automatically loads .env file on first call.
+func ensureEnvLoaded() {
+	if autoLoadEnabled {
+		autoLoadOnce.Do(func() {
+			dotenv.Load(autoLoadPath)
+		})
+	}
+}
 
 // EnvVariable contains information about the environment variable, such as key,
 // value, and default value.
@@ -15,6 +48,7 @@ type EnvVariable struct {
 	Val          string
 	DefaultValue interface{}
 	IsDefined    bool
+	mu           sync.RWMutex // protects Val and IsDefined for concurrent access
 }
 
 // EnvVariables is where environment variables are stored.
@@ -24,22 +58,25 @@ var EnvVariables = make(map[string]*EnvVariable)
 //
 //	genv.Key("env-key").String()
 func Key(key string) *EnvVariable {
-	envVar, ok := EnvVariables[key]
-	if !ok {
-		// Not in cache, create new entry
-		val, defined := os.LookupEnv(key)
-		EnvVariables[key] = &EnvVariable{Key: key, Val: val, IsDefined: defined}
-		return EnvVariables[key]
-	}
+	// Auto-load .env file on first Key() call
+	ensureEnvLoaded()
 
-	// If cached but was not defined, re-check the environment
-	// This handles the case where dotenv.Load() is called after genv.Key()
-	if !envVar.IsDefined {
-		val, defined := os.LookupEnv(key)
-		if defined {
-			envVar.Val = val
-			envVar.IsDefined = true
+	// Try to get from cache with read lock first
+	mu.RLock()
+	envVar, ok := EnvVariables[key]
+	mu.RUnlock()
+
+	if !ok {
+		// Not in cache, need write lock to create new entry
+		mu.Lock()
+		// Double-check after acquiring write lock
+		envVar, ok = EnvVariables[key]
+		if !ok {
+			val, defined := os.LookupEnv(key)
+			envVar = &EnvVariable{Key: key, Val: val, IsDefined: defined}
+			EnvVariables[key] = envVar
 		}
+		mu.Unlock()
 	}
 
 	return envVar
@@ -50,9 +87,9 @@ func Key(key string) *EnvVariable {
 //
 //	genv.Key("env-key").Default("defaultValue").String()
 func (e *EnvVariable) Default(defaultValue interface{}) *EnvVariable {
-
+	e.mu.Lock()
 	e.DefaultValue = defaultValue
-
+	e.mu.Unlock()
 	return e
 }
 
@@ -60,16 +97,18 @@ func (e *EnvVariable) Default(defaultValue interface{}) *EnvVariable {
 //
 //	genv.Key("env-key").Update("updatedValue")
 func (e *EnvVariable) Update(value interface{}) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
-	switch value.(type) {
+	switch v := value.(type) {
 	case bool:
-		e.Val = strconv.FormatBool(value.(bool))
+		e.Val = strconv.FormatBool(v)
 	case float64:
-		e.Val = strconv.FormatFloat(value.(float64), 'f', -1, 64)
+		e.Val = strconv.FormatFloat(v, 'f', -1, 64)
 	case int:
-		e.Val = strconv.FormatInt(int64(value.(int)), 10)
+		e.Val = strconv.FormatInt(int64(v), 10)
 	case string:
-		e.Val = value.(string)
+		e.Val = v
 	}
 
 	e.IsDefined = true
@@ -80,18 +119,17 @@ func (e *EnvVariable) Update(value interface{}) {
 //
 //	genv.Key("env-key").Bool()
 func (e *EnvVariable) Bool() bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
-	var dv bool
 	if !e.IsDefined {
 		if e.DefaultValue != nil {
-			dv = e.DefaultValue.(bool)
+			return e.DefaultValue.(bool)
 		}
-
-		return dv
+		return false
 	}
 
 	val, _ := strconv.ParseBool(e.Val)
-
 	return val
 }
 
@@ -99,18 +137,17 @@ func (e *EnvVariable) Bool() bool {
 //
 //	genv.Key("env-key").Float()
 func (e *EnvVariable) Float() float64 {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
-	var dv float64
 	if !e.IsDefined {
 		if e.DefaultValue != nil {
-			dv = e.DefaultValue.(float64)
+			return e.DefaultValue.(float64)
 		}
-
-		return dv
+		return 0
 	}
 
 	val, _ := strconv.ParseFloat(e.Val, 64)
-
 	return val
 }
 
@@ -118,18 +155,17 @@ func (e *EnvVariable) Float() float64 {
 //
 //	genv.Key("env-key").Int()
 func (e *EnvVariable) Int() int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
-	var dv int
 	if !e.IsDefined {
 		if e.DefaultValue != nil {
-			dv = e.DefaultValue.(int)
+			return e.DefaultValue.(int)
 		}
-
-		return dv
+		return 0
 	}
 
 	val, _ := strconv.ParseInt(e.Val, 10, 32)
-
 	return int(val)
 }
 
@@ -149,14 +185,14 @@ func trimQuotes(s string) string {
 //
 //	genv.Key("env-key").String()
 func (e *EnvVariable) String() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
-	var dv string
 	if !e.IsDefined {
 		if e.DefaultValue != nil {
-			dv = e.DefaultValue.(string)
+			return trimQuotes(e.DefaultValue.(string))
 		}
-
-		return trimQuotes(dv)
+		return ""
 	}
 
 	return trimQuotes(e.Val)
